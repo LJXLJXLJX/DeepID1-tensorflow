@@ -180,9 +180,11 @@ class CNN():
         if type(patch_name)!=str:
             raise Exception('patch_name should be a str')
         logdir = 'log'
-        if tf.gfile.Exists(logdir):
-            tf.gfile.DeleteRecursively(logdir)
-        tf.gfile.MakeDirs(logdir)
+
+        # 加上以下语句会删除上次的log
+        # if tf.gfile.Exists(logdir):
+        #     tf.gfile.DeleteRecursively(logdir)
+        # tf.gfile.MakeDirs(logdir)
 
         img, label = read_single_sample_from_tfrecords('data/'+patch_name+'.tfrecords')
 
@@ -201,8 +203,8 @@ class CNN():
             coord = tf.train.Coordinator()
             threads = tf.train.start_queue_runners(sess=sess, coord=coord)
             train_writer = tf.summary.FileWriter(logdir + '/'+patch_name, sess.graph)
-            for i in range(15001):
-                print('training...',i, '/20000')
+            for i in range(50001):
+                print('training...',i, '/50000')
 
                 img_batch,label_batch=sess.run([imgs,labels])
 
@@ -214,8 +216,8 @@ class CNN():
                 summary, _ = sess.run([self.merged, self.train_step], {self.h0: img_batch, self.y_: label_batch})
 
                 train_writer.add_summary(summary, i)
-                if i % 5000 == 0 and i != 0:
-                    self.saver.save(sess, 'checkpoint/'+patch_name+'_%05d.ckpt' % i)
+                if i % 500 == 0 and i != 0:
+                    self.saver.save(sess, 'checkpoint/'+patch_name)
             coord.request_stop()
             coord.join(threads)
 

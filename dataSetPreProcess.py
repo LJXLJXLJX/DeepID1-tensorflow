@@ -51,10 +51,6 @@ def read_csv(csv_path):
     return img_pathList, labelList
 
 
-
-
-
-
 class DataSetPreProcessor():
     def __init__(self, patchID):
         if patchID not in [0, 1, 2, 3, 4, 5, 6]:
@@ -236,7 +232,7 @@ class DataSetPreProcessor():
                     print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
         self.update_dataset_imformation()
 
-    # 生成用于训练deepid的recorder
+    # 生成用于训练deepid的tfrecords
     def generate_recorder_for_deepid(self):
         def generate_recorder_for_a_patch(TFwriter, pairList):
             count = 0
@@ -260,6 +256,18 @@ class DataSetPreProcessor():
             img_pathList, labelList = read_csv('data/patch_1_for_deepid.csv')
             pairList = list(zip(img_pathList, labelList))
             generate_recorder_for_a_patch(TFwriter, pairList)
+
+    # 生成用于训练deepid的pickle（和tfrecorder 二选一）
+    def generate_pickle_for_deepid(self):
+        imgList = []
+        if self.patch_to_process == 1:
+            img_pathList, labelList = read_csv('data/patch_1_for_deepid.csv')
+            for img_path in img_pathList:
+                img = cv2.imread(img_path)
+                imgList.append(img)
+            with open('data/patch_1.pkl', 'wb') as f:
+                pickle.dump(imgList, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(labelList, f, pickle.HIGHEST_PROTOCOL)
 
     # 判断输入图像是否有且只有一张人脸 （毕竟数据集里混进了很多奇怪的东西 输入之前要筛选一下）
     def is_face(self, img):
