@@ -150,8 +150,8 @@ class DataSetPreProcessor():
             elif self.patch_to_process == 6:
                 people_imgs = self.get_pics_for_one_people(patch_6_path + people)
 
-            people_imgs_for_train = people_imgs[0:4 * len(people_imgs) // 5]  # 取其中4/5作为训练集
-            people_imgs_for_valid = people_imgs[4 * len(people_imgs) // 5:]  # 其中1/5作为验证（防止过拟合）
+            people_imgs_for_train = people_imgs[0:9 * len(people_imgs) // 10]  # 取其中9/10作为训练集
+            people_imgs_for_valid = people_imgs[9 * len(people_imgs) // 10:]  # 其中1/10作为验证（防止过拟合）
             dataset_for_deepid_train += zip(people_imgs_for_train, [str(label)] * len(people_imgs_for_train))
             dataset_for_deepid_valid+=zip(people_imgs_for_valid, [str(label)] * len(people_imgs_for_valid))
 
@@ -162,29 +162,53 @@ class DataSetPreProcessor():
             with open('data/dataset_for_deepid_train.csv', 'w') as f:
                 for item in dataset_for_deepid_train:
                     print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
+
+            with open('data/dataset_for_deepid_valid.csv', 'w') as f:
+                for item in dataset_for_deepid_valid:
+                    print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
+
         elif self.patch_to_process == 1:
             with open('data/patch_1_for_deepid_train.csv', 'w') as f:
                 for item in dataset_for_deepid_train:
                     print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
+            with open('data/patch_1_for_deepid_valid.csv', 'w') as f:
+                for item in dataset_for_deepid_valid:
+                    print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
+
         elif self.patch_to_process == 2:
             with open('data/patch_2_for_deepid_train.csv', 'w') as f:
                 for item in dataset_for_deepid_train:
+                    print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
+            with open('data/patch_2_for_deepid_valid.csv', 'w') as f:
+                for item in dataset_for_deepid_valid:
                     print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
         elif self.patch_to_process == 3:
             with open('data/patch_3_for_deepid_train.csv', 'w') as f:
                 for item in dataset_for_deepid_train:
                     print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
+            with open('data/patch_3_for_deepid_valid.csv', 'w') as f:
+                for item in dataset_for_deepid_valid:
+                    print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
         elif self.patch_to_process == 4:
             with open('data/patch_4_for_deepid_train.csv', 'w') as f:
                 for item in dataset_for_deepid_train:
+                    print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
+            with open('data/patch_4_for_deepid_valid.csv', 'w') as f:
+                for item in dataset_for_deepid_valid:
                     print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
         elif self.patch_to_process == 5:
             with open('data/patch_5_for_deepid_train.csv', 'w') as f:
                 for item in dataset_for_deepid_train:
                     print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
+            with open('data/patch_5_for_deepid_valid.csv', 'w') as f:
+                for item in dataset_for_deepid_valid:
+                    print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
         elif self.patch_to_process == 6:
             with open('data/patch_6_for_deepid_train.csv', 'w') as f:
                 for item in dataset_for_deepid_train:
+                    print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
+            with open('data/patch_6_for_deepid_valid.csv', 'w') as f:
+                for item in dataset_for_deepid_valid:
                     print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
         self.update_dataset_imformation()
 
@@ -259,18 +283,22 @@ class DataSetPreProcessor():
         if self.patch_to_process not in range(1, 7):
             raise Exception('The patch should be 1 to 6')
         if self.patch_to_process == 1:
-            TFwriter = tf.python_io.TFRecordWriter("data/patch_1.tfrecords")
-            img_pathList, labelList = read_csv('data/patch_1_for_deepid.csv')
+            TFwriter = tf.python_io.TFRecordWriter("data/patch_1_train.tfrecords")
+            img_pathList, labelList = read_csv('data/patch_1_for_deepid_train.csv')
+            pairList = list(zip(img_pathList, labelList))
+            generate_recorder_for_a_patch(TFwriter, pairList)
+            TFwriter=tf.python_io.TFRecordWriter("data/patch_1_valid.tfrecords")
+            img_pathList, labelList = read_csv('data/patch_1_for_deepid_valid.csv')
             pairList = list(zip(img_pathList, labelList))
             generate_recorder_for_a_patch(TFwriter, pairList)
 
     # 生成用于训练deepid的pickle（和tfrecorder 二选一）
     def generate_pickle_for_deepid(self):
-        imgList = []
         if self.patch_to_process == 1:
-            img_pathList, labelList = read_csv('data/patch_1_for_deepid.csv')
+            img_pathList, labelList = read_csv('data/patch_1_for_deepid_train.csv')
             count = 0
             num = len(img_pathList)
+            imgList = []
             for img_path in img_pathList:
                 count += 1
                 print('reading...', count, '/', num)
@@ -278,7 +306,22 @@ class DataSetPreProcessor():
                 imgList.append(img)
             imgArr = np.asarray(imgList, dtype='uint8')
             labelArr = np.asarray(labelList, dtype='float32')
-            with open('data/patch_1.pkl', 'wb') as f:
+            with open('data/patch_1_train.pkl', 'wb') as f:
+                pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
+
+            img_pathList, labelList = read_csv('data/patch_1_for_deepid_valid.csv')
+            count = 0
+            num = len(img_pathList)
+            imgList = []
+            for img_path in img_pathList:
+                count += 1
+                print('reading...', count, '/', num)
+                img = cv2.imread(img_path)
+                imgList.append(img)
+            imgArr = np.asarray(imgList, dtype='uint8')
+            labelArr = np.asarray(labelList, dtype='float32')
+            with open('data/patch_1_valid.pkl', 'wb') as f:
                 pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
                 pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
 

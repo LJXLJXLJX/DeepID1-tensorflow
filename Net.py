@@ -13,7 +13,6 @@ import dataSetPreProcess
 import pickle
 
 
-
 # 高斯截断初始化w
 def weight_variable(shape):
     with tf.name_scope('weights'):
@@ -91,31 +90,28 @@ def read_single_sample_from_tfrecords(tfrecords_path):
     })
     img = tf.decode_raw(features['img'], tf.uint8)
     label = tf.cast(features['label'], tf.int32)
-    img=tf.reshape(img,[31,31,3])
-    label=tf.one_hot(label,depth=class_num)
+    img = tf.reshape(img, [31, 31, 3])
+    label = tf.one_hot(label, depth=class_num)
 
     return img, label
 
-#读取pickle文件
+
+# 读取pickle文件
 def read_pickle(pickle_path):
-    with open(pickle_path,'rb') as f:
-        imgArr=pickle.load(f)
-        labelArr=pickle.load(f)
-    return imgArr,labelArr
+    with open(pickle_path, 'rb') as f:
+        imgArr = pickle.load(f)
+        labelArr = pickle.load(f)
+    return imgArr, labelArr
 
 
 # 从（pickle读取到的）arr 获取一次训练的batch
-def get_batch_from_arr(imgArr, labelArr,start):
+def get_batch_from_arr(imgArr, labelArr, start):
     end = (start + 1024) % imgArr.shape[0]
     # 圈内
     if start < end:
         return imgArr[start:end], labelArr[start:end], end
     # 轮了一圈 开始第二圈
     return np.vstack([imgArr[start:], imgArr[:end]]), np.vstack([labelArr[start:], labelArr[:end]]), end
-
-
-
-
 
 
 # 构建输入为彩色图像网络结构
@@ -156,8 +152,8 @@ class CNN():
     # 此处并未完全按照论文取patch 嫌麻烦 少取了四个rectangle的 翻转输入也省了
     # 前一个数字为选取部分（1，2，3，4，5，6分别对应整张脸 右眼 左眼 鼻尖 左嘴角 右嘴角）
     # 后一个数字表示三种尺度 分别是原始区域 缩小至3/4 1/2 文章没给出具体数字 就这样吧
-    def train_patch(self,patch_name):
-        if type(patch_name)!=str:
+    def train_patch(self, patch_name):
+        if type(patch_name) != str:
             raise Exception('patch_name should be a str')
         logdir = 'log'
 
@@ -166,29 +162,26 @@ class CNN():
         #     tf.gfile.DeleteRecursively(logdir)
         # tf.gfile.MakeDirs(logdir)
 
-        img, label = read_single_sample_from_tfrecords('data/'+patch_name+'.tfrecords')
-
+        img, label = read_single_sample_from_tfrecords('data/' + patch_name + '.tfrecords')
 
         with tf.Session() as sess:
             imgs, labels = tf.train.shuffle_batch([img, label],
-                                                            batch_size=1024,
-                                                            capacity=20000,
-                                                            min_after_dequeue=10000,
-                                                            num_threads=10)
+                                                  batch_size=1024,
+                                                  capacity=20000,
+                                                  min_after_dequeue=10000,
+                                                  num_threads=10)
             sess.run(tf.global_variables_initializer())
             sess.run(tf.local_variables_initializer())
-            #恢复上次的训练进度
-            self.saver.restore(sess,'checkpoint/patch_1_05000.ckpt')
+            # 恢复上次的训练进度
+            # self.saver.restore(sess,'checkpoint/patch_1_05000.ckpt')
 
             coord = tf.train.Coordinator()
             threads = tf.train.start_queue_runners(sess=sess, coord=coord)
-            train_writer = tf.summary.FileWriter(logdir + '/'+patch_name, sess.graph)
+            train_writer = tf.summary.FileWriter(logdir + '/' + patch_name, sess.graph)
             for i in range(50001):
-                print('training...',i, '/50000')
+                print('training...', i, '/100000')
 
-                img_batch,label_batch=sess.run([imgs,labels])
-
-
+                img_batch, label_batch = sess.run([imgs, labels])
 
                 # label_batch=(np.arange(class_num)==label_batch[:,None]).astype(np.float32)
                 # label = (np.arange(class_num) == np.asarray([label])).astype(np.float32)
@@ -197,14 +190,17 @@ class CNN():
 
                 train_writer.add_summary(summary, i)
                 if i % 500 == 0 and i != 0:
-                    self.saver.save(sess, 'checkpoint/'+patch_name+'.ckpt')
+                    self.saver.save(sess, 'checkpoint/' + patch_name + '.ckpt')
             coord.request_stop()
             coord.join(threads)
 
-    #从pickle读取并训练
-    def train_patch_from_pickle(self,patch_name):
-        imgArr,labelArr=read_pickle('data/'+patch_name+'.pkl')
-        labelArr = (np.arange(class_num) == labelArr[:, None]).astype(np.float32)  # 训练分类结果 onehot码表示
+    # 从pickle读取并训练
+    def train_patch_from_pickle(self, patch_name):
+        imgArrTrain, labelArrTrain = read_pickle('data/' + patch_name + '_train.pkl')
+        imgArrValid, labelArrValid = read_pickle('data/' + patch_name + '_valid.pkl')
+        labelArrTrain = (np.arange(class_num) == labelArrTrain[:, None]).astype(np.float32)  # 训练分类结果 onehot码表示
+        labelArrValid = (np.arange(class_num) == labelArrValid[:, None]).astype(np.float32)
+
         logdir = 'log'
         # if tf.gfile.Exists(logdir):
         #     tf.gfile.DeleteRecursively(logdir)
@@ -212,20 +208,26 @@ class CNN():
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
             sess.run(tf.local_variables_initializer())
-            self.saver.restore(sess, 'checkpoint/patch_1')
-            train_writer = tf.summary.FileWriter(logdir +  '/'+patch_name, sess.graph)
+            # self.saver.restore(sess, 'checkpoint/patch_1')
+            train_writer = tf.summary.FileWriter(logdir + '/' + patch_name + '/train', sess.graph)
+            valid_writer = tf.summary.FileWriter(logdir + '/' + patch_name + '/valid', sess.graph)
 
             idx = 0
-            count=0
-            for i in range(50001):
-                count+=1
-                print('training...',count,'/50000')
-                batch_x, batch_y, idx = get_batch_from_arr(imgArr, labelArr, idx)
+            count = 0
+            for i in range(100001):
+                count += 1
+                print('training...', count, '/100000')
+                batch_x, batch_y, idx = get_batch_from_arr(imgArrTrain, labelArrTrain, idx)
                 # 分类训练集
                 summary, _ = sess.run([self.merged, self.train_step], {self.h0: batch_x, self.y_: batch_y})
                 train_writer.add_summary(summary, i)
+                if i % 100 == 0:
+                    summary, accu = sess.run([self.merged, self.accuracy],
+                                             {self.h0: imgArrValid, self.y_: labelArrValid})
+                    valid_writer.add_summary(summary, i)
                 if i % 5000 == 0 and i != 0:
-                    self.saver.save(sess, 'checkpoint/'+patch_name+'.ckpt')
+                    self.saver.save(sess, 'checkpoint/' + patch_name + '.ckpt')
+
 
 # 构建输入为灰度图像的网络结构（继承自CNN）
 class grayCNN(CNN):
@@ -240,6 +242,8 @@ class grayCNN(CNN):
 
 
 if __name__ == '__main__':
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     processor = dataSetPreProcess.DataSetPreProcessor(0)
     class_num = processor.people_num_for_deepid
     cnn = CNN()
