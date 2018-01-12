@@ -132,7 +132,8 @@ class DataSetPreProcessor():
     # 构建用于训练deepid的csv
     def generate_csv_for_deepid(self):
         self.update_dataset_imformation()
-        dataset_for_deepid = []
+        dataset_for_deepid_train = []
+        dataset_for_deepid_valid=[]
         for label, people in self.people_list_for_deepid:
             if self.patch_to_process == 0:
                 people_imgs = self.get_pics_for_one_people(dataset_path + people)
@@ -149,35 +150,41 @@ class DataSetPreProcessor():
             elif self.patch_to_process == 6:
                 people_imgs = self.get_pics_for_one_people(patch_6_path + people)
 
-            dataset_for_deepid += zip(people_imgs, [str(label)] * len(people_imgs))
-        random.shuffle(dataset_for_deepid)
+            people_imgs_for_train = people_imgs[0:4 * len(people_imgs) // 5]  # 取其中4/5作为训练集
+            people_imgs_for_valid = people_imgs[4 * len(people_imgs) // 5:]  # 其中1/5作为验证（防止过拟合）
+            dataset_for_deepid_train += zip(people_imgs_for_train, [str(label)] * len(people_imgs_for_train))
+            dataset_for_deepid_valid+=zip(people_imgs_for_valid, [str(label)] * len(people_imgs_for_valid))
+
+
+        random.shuffle(dataset_for_deepid_train)
+        random.shuffle(dataset_for_deepid_valid)
         if self.patch_to_process == 0:
-            with open('data/dataset_for_deepid.csv', 'w') as f:
-                for item in dataset_for_deepid:
+            with open('data/dataset_for_deepid_train.csv', 'w') as f:
+                for item in dataset_for_deepid_train:
                     print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
         elif self.patch_to_process == 1:
-            with open('data/patch_1_for_deepid.csv', 'w') as f:
-                for item in dataset_for_deepid:
+            with open('data/patch_1_for_deepid_train.csv', 'w') as f:
+                for item in dataset_for_deepid_train:
                     print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
         elif self.patch_to_process == 2:
-            with open('data/patch_2_for_deepid.csv', 'w') as f:
-                for item in dataset_for_deepid:
+            with open('data/patch_2_for_deepid_train.csv', 'w') as f:
+                for item in dataset_for_deepid_train:
                     print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
         elif self.patch_to_process == 3:
-            with open('data/patch_3_for_deepid.csv', 'w') as f:
-                for item in dataset_for_deepid:
+            with open('data/patch_3_for_deepid_train.csv', 'w') as f:
+                for item in dataset_for_deepid_train:
                     print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
         elif self.patch_to_process == 4:
-            with open('data/patch_4_for_deepid.csv', 'w') as f:
-                for item in dataset_for_deepid:
+            with open('data/patch_4_for_deepid_train.csv', 'w') as f:
+                for item in dataset_for_deepid_train:
                     print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
         elif self.patch_to_process == 5:
-            with open('data/patch_5_for_deepid.csv', 'w') as f:
-                for item in dataset_for_deepid:
+            with open('data/patch_5_for_deepid_train.csv', 'w') as f:
+                for item in dataset_for_deepid_train:
                     print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
         elif self.patch_to_process == 6:
-            with open('data/patch_6_for_deepid.csv', 'w') as f:
-                for item in dataset_for_deepid:
+            with open('data/patch_6_for_deepid_train.csv', 'w') as f:
+                for item in dataset_for_deepid_train:
                     print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
         self.update_dataset_imformation()
 
@@ -262,12 +269,18 @@ class DataSetPreProcessor():
         imgList = []
         if self.patch_to_process == 1:
             img_pathList, labelList = read_csv('data/patch_1_for_deepid.csv')
+            count = 0
+            num = len(img_pathList)
             for img_path in img_pathList:
+                count += 1
+                print('reading...', count, '/', num)
                 img = cv2.imread(img_path)
                 imgList.append(img)
+            imgArr = np.asarray(imgList, dtype='uint8')
+            labelArr = np.asarray(labelList, dtype='float32')
             with open('data/patch_1.pkl', 'wb') as f:
-                pickle.dump(imgList, f, pickle.HIGHEST_PROTOCOL)
-                pickle.dump(labelList, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
 
     # 判断输入图像是否有且只有一张人脸 （毕竟数据集里混进了很多奇怪的东西 输入之前要筛选一下）
     def is_face(self, img):
@@ -312,5 +325,6 @@ if __name__ == '__main__':
     # processor.generate_patch()
     processor.generate_csv_for_deepid()
     processor.generate_csv_for_verification_model()
-    processor.generate_recorder_for_deepid()
+    processor.generate_pickle_for_deepid()
+    # processor.generate_recorder_for_deepid()
     # processor.wash_data()

@@ -10,6 +10,7 @@ import time
 import os
 import cv2
 import dataSetPreProcess
+import pickle
 
 
 
@@ -95,50 +96,29 @@ def read_single_sample_from_tfrecords(tfrecords_path):
 
     return img, label
 
-# 得到一次训练的batch
-# def get_batch(start, step):
-#     img_batch = []
-#     label_batch = []
-#     with open('data/dataset_for_deepid.csv', 'r') as f:
-#         lines = f.readlines()
-#         line_num = len(lines)
-#     end = (start + step) % line_num
-#     count = 0
-#     # 圈内
-#     if start < end:
-#         sub_lines = lines[start:end]
-#         sub_len = len(sub_lines)
-#         for line in sub_lines:
-#             count += 1
-#             print(' get_batch:', count, '/', sub_len)
-#             line = line.split(' ')
-#             img_path = line[0]
-#             label = int(line[-1])
-#             label = (np.arange(class_num) == label).astype(np.float32)  # 转成onehot
-#             img = cv2.imread(img_path)
-#             img_batch.append(img)
-#             label_batch.append(label)
-#
-#         return np.asarray(img_batch, dtype='uint8'), np.asarray(label_batch, dtype='float32'), end
-#     # 圈外
-#     else:
-#         sub_lines = lines[start:] + lines[0:end]
-#         sub_len = len(sub_lines)
-#         for line in sub_lines:
-#             count += 1
-#             print(' get_batch:', count, '/', sub_len)
-#             line = line.split(' ')
-#             img_path = line[0]
-#             label = int(line[-1])
-#             label = (np.arange(class_num) == label).astype(np.float32)  # 转成onehot
-#             img = cv2.imread(img_path)
-#             img_batch.append(img)
-#             label_batch.append(label)
-#         return np.asarray(img_batch, dtype='float32'), np.asarray(label_batch, dtype='float32'), end
+#读取pickle文件
+def read_pickle(pickle_path):
+    with open(pickle_path,'rb') as f:
+        imgArr=pickle.load(f)
+        labelArr=pickle.load(f)
+    return imgArr,labelArr
+
+
+# 从（pickle读取到的）arr 获取一次训练的batch
+def get_batch_from_arr(imgArr, labelArr,start):
+    end = (start + 1024) % imgArr.shape[0]
+    # 圈内
+    if start < end:
+        return imgArr[start:end], labelArr[start:end], end
+    # 轮了一圈 开始第二圈
+    return np.vstack([imgArr[start:], imgArr[:end]]), np.vstack([labelArr[start:], labelArr[:end]]), end
+
+
+
+
 
 
 # 构建输入为彩色图像网络结构
-
 class CNN():
     def __init__(self):
         with tf.name_scope('input'):
@@ -217,9 +197,35 @@ class CNN():
 
                 train_writer.add_summary(summary, i)
                 if i % 500 == 0 and i != 0:
-                    self.saver.save(sess, 'checkpoint/'+patch_name)
+                    self.saver.save(sess, 'checkpoint/'+patch_name+'.ckpt')
             coord.request_stop()
             coord.join(threads)
+
+    #从pickle读取并训练
+    def train_patch_from_pickle(self,patch_name):
+        imgArr,labelArr=read_pickle('data/'+patch_name+'.pkl')
+        labelArr = (np.arange(class_num) == labelArr[:, None]).astype(np.float32)  # 训练分类结果 onehot码表示
+        logdir = 'log'
+        # if tf.gfile.Exists(logdir):
+        #     tf.gfile.DeleteRecursively(logdir)
+        # tf.gfile.MakeDirs(logdir)
+        with tf.Session() as sess:
+            sess.run(tf.global_variables_initializer())
+            sess.run(tf.local_variables_initializer())
+            self.saver.restore(sess, 'checkpoint/patch_1')
+            train_writer = tf.summary.FileWriter(logdir +  '/'+patch_name, sess.graph)
+
+            idx = 0
+            count=0
+            for i in range(50001):
+                count+=1
+                print('training...',count,'/50000')
+                batch_x, batch_y, idx = get_batch_from_arr(imgArr, labelArr, idx)
+                # 分类训练集
+                summary, _ = sess.run([self.merged, self.train_step], {self.h0: batch_x, self.y_: batch_y})
+                train_writer.add_summary(summary, i)
+                if i % 5000 == 0 and i != 0:
+                    self.saver.save(sess, 'checkpoint/'+patch_name+'.ckpt')
 
 # 构建输入为灰度图像的网络结构（继承自CNN）
 class grayCNN(CNN):
@@ -237,4 +243,4 @@ if __name__ == '__main__':
     processor = dataSetPreProcess.DataSetPreProcessor(0)
     class_num = processor.people_num_for_deepid
     cnn = CNN()
-    cnn.train_patch('patch_1')
+    cnn.train_patch_from_pickle('patch_1')
