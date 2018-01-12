@@ -1,7 +1,7 @@
 
 
 import dlib
-
+import cv2
 
 
 detector = dlib.get_frontal_face_detector()
@@ -30,7 +30,14 @@ def alignment(img):
 
         landmarkList=[left_eye,right_eye,nose_tip,mouse_left,mouse_right]
         return landmarkList
-        # for landmark in landmarkList:
-        #     cv2.circle(img, (landmark[0],landmark[1]), 5, (255, 0, 0), -1, 8)
 
 
+
+if __name__=='__main__':
+    img=cv2.imread('1.jpg')
+    landmarkList=alignment(img)
+    for landmark in landmarkList:
+        cv2.circle(img, (landmark[0],landmark[1]), 5, (255, 0, 0), -1, 8)
+    cv2.imshow('1',img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()

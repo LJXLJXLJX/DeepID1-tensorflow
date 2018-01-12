@@ -64,15 +64,15 @@ class DataSetPreProcessor():
             os.mkdir('data')
         if not os.path.exists(patch_1_path):
             os.mkdir(patch_1_path)
-        if not os.path.exists(patch_1_path):
+        if not os.path.exists(patch_2_path):
             os.mkdir(patch_2_path)
-        if not os.path.exists(patch_1_path):
+        if not os.path.exists(patch_3_path):
             os.mkdir(patch_3_path)
-        if not os.path.exists(patch_1_path):
+        if not os.path.exists(patch_4_path):
             os.mkdir(patch_4_path)
-        if not os.path.exists(patch_1_path):
+        if not os.path.exists(patch_5_path):
             os.mkdir(patch_5_path)
-        if not os.path.exists(patch_1_path):
+        if not os.path.exists(patch_6_path):
             os.mkdir(patch_6_path)
 
         if self.patch_to_process == 0:
@@ -110,30 +110,73 @@ class DataSetPreProcessor():
         return people_imgs
 
     def generate_patch(self):
+        def getRoi(img, left_landmark, right_landmark):
+            # 正方形区域的半边长
+            roi_size_half = min(left_landmark[0],
+                                left_landmark[1],
+                                img.shape[0] - left_landmark[1],
+                                img.shape[1] - left_landmark[0],
+                                right_landmark[0],
+                                right_landmark[1],
+                                img.shape[0] - right_landmark[1],
+                                img.shape[1] - right_landmark[0]
+                                )
+            left_img = img[
+                       left_landmark[1] - roi_size_half:left_landmark[1] + roi_size_half,
+                       left_landmark[0] - roi_size_half:left_landmark[0] + roi_size_half
+                       ]
+            right_img = img[
+                        right_landmark[1] - roi_size_half:right_landmark[1] + roi_size_half,
+                        right_landmark[0] - roi_size_half:right_landmark[0] + roi_size_half
+                        ]
+            return left_img, right_img
+
         if self.patch_to_process == 0:
             raise Exception("you can't generate origin dataset")
         temp_0_processor = DataSetPreProcessor(0)
-        if self.patch_to_process == 1:
-            people_count = 0
-            people_num = temp_0_processor.people_num_for_deepid
-            for people in temp_0_processor.people_list_for_deepid:
-                people = people[1]
-                people_count += 1
-                print('Generating...', people_count, '/', people_num)
+
+        people_count = 0
+        people_num = temp_0_processor.people_num_for_deepid
+        for people in temp_0_processor.people_list_for_deepid:
+            people = people[1]
+            people_count += 1
+            print('Generating...', people_count, '/', people_num)
+            if self.patch_to_process == 1:
                 if not os.path.exists(patch_1_path + people):
                     os.mkdir(patch_1_path + people)
-                    for img_name in os.listdir(dataset_path + people):
-                        origin_img_path = os.path.join(dataset_path + people, img_name)
-                        dst_img_path = os.path.join(patch_1_path + people, img_name)
-                        img = cv2.imread(origin_img_path)
-                        img = cv2.resize(img, (31, 31))
-                        cv2.imwrite(dst_img_path, img)
+                for img_name in os.listdir(dataset_path + people):
+                    origin_img_path = os.path.join(dataset_path + people, img_name)
+                    dst_img_path = os.path.join(patch_1_path + people, img_name)
+                    img = cv2.imread(origin_img_path)
+                    img = cv2.resize(img, (31, 31))
+                    cv2.imwrite(dst_img_path, img)
+
+            if self.patch_to_process in [2, 3]:
+                if not os.path.exists(patch_2_path + people):
+                    os.mkdir(patch_2_path + people)
+                if not os.path.exists(patch_3_path + people):
+                    os.mkdir(patch_3_path + people)
+                for img_name in os.listdir(dataset_path + people):
+                    origin_img_path = os.path.join(dataset_path + people, img_name)
+                    left_dst_img_path = os.path.join(patch_2_path + people, img_name)
+                    right_dst_img_path = os.path.join(patch_3_path + people, img_name)
+                    img = cv2.imread(origin_img_path)
+                    left_landmark = face_alignment.alignment(img)[0]
+                    right_landmark = face_alignment.alignment(img)[1]
+                    try:
+                        left_img, right_img = getRoi(img, left_landmark, right_landmark)
+                        left_img = cv2.resize(left_img, (31, 31))
+                        right_img = cv2.resize(right_img, (31, 31))
+                        cv2.imwrite(left_dst_img_path, left_img)
+                        cv2.imwrite(right_dst_img_path, right_img)
+                    except:
+                        print('Something wrong happens ...')
 
     # 构建用于训练deepid的csv
     def generate_csv_for_deepid(self):
         self.update_dataset_imformation()
         dataset_for_deepid_train = []
-        dataset_for_deepid_valid=[]
+        dataset_for_deepid_valid = []
         for label, people in self.people_list_for_deepid:
             if self.patch_to_process == 0:
                 people_imgs = self.get_pics_for_one_people(dataset_path + people)
@@ -153,8 +196,7 @@ class DataSetPreProcessor():
             people_imgs_for_train = people_imgs[0:9 * len(people_imgs) // 10]  # 取其中9/10作为训练集
             people_imgs_for_valid = people_imgs[9 * len(people_imgs) // 10:]  # 其中1/10作为验证（防止过拟合）
             dataset_for_deepid_train += zip(people_imgs_for_train, [str(label)] * len(people_imgs_for_train))
-            dataset_for_deepid_valid+=zip(people_imgs_for_valid, [str(label)] * len(people_imgs_for_valid))
-
+            dataset_for_deepid_valid += zip(people_imgs_for_valid, [str(label)] * len(people_imgs_for_valid))
 
         random.shuffle(dataset_for_deepid_train)
         random.shuffle(dataset_for_deepid_valid)
@@ -287,7 +329,7 @@ class DataSetPreProcessor():
             img_pathList, labelList = read_csv('data/patch_1_for_deepid_train.csv')
             pairList = list(zip(img_pathList, labelList))
             generate_recorder_for_a_patch(TFwriter, pairList)
-            TFwriter=tf.python_io.TFRecordWriter("data/patch_1_valid.tfrecords")
+            TFwriter = tf.python_io.TFRecordWriter("data/patch_1_valid.tfrecords")
             img_pathList, labelList = read_csv('data/patch_1_for_deepid_valid.csv')
             pairList = list(zip(img_pathList, labelList))
             generate_recorder_for_a_patch(TFwriter, pairList)
@@ -364,10 +406,11 @@ class DataSetPreProcessor():
 
 
 if __name__ == '__main__':
-    processor = DataSetPreProcessor(1)
+    processor = DataSetPreProcessor(2)
     # processor.generate_patch()
-    processor.generate_csv_for_deepid()
-    processor.generate_csv_for_verification_model()
-    processor.generate_pickle_for_deepid()
+    # processor.generate_csv_for_deepid()
+    # processor.generate_csv_for_verification_model()
+    # processor.generate_pickle_for_deepid()
     # processor.generate_recorder_for_deepid()
     # processor.wash_data()
+    processor.generate_patch()
