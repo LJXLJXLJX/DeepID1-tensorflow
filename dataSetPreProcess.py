@@ -110,26 +110,61 @@ class DataSetPreProcessor():
         return people_imgs
 
     def generate_patch(self):
-        def getRoi(img, left_landmark, right_landmark):
-            # 正方形区域的半边长
-            roi_size_half = min(left_landmark[0],
-                                left_landmark[1],
-                                img.shape[0] - left_landmark[1],
-                                img.shape[1] - left_landmark[0],
-                                right_landmark[0],
-                                right_landmark[1],
-                                img.shape[0] - right_landmark[1],
-                                img.shape[1] - right_landmark[0]
+        # 鼻尖一点
+        def getRoi(img, landmark):
+            # 正方形区域的半边长5
+            roi_size_half = min(landmark[0],
+                                landmark[1],
+                                img.shape[0] - landmark[1],
+                                img.shape[1] - landmark[0],
+                                img.shape[0] // 4
                                 )
-            left_img = img[
-                       left_landmark[1] - roi_size_half:left_landmark[1] + roi_size_half,
-                       left_landmark[0] - roi_size_half:left_landmark[0] + roi_size_half
-                       ]
-            right_img = img[
-                        right_landmark[1] - roi_size_half:right_landmark[1] + roi_size_half,
-                        right_landmark[0] - roi_size_half:right_landmark[0] + roi_size_half
-                        ]
-            return left_img, right_img
+            img = img[
+                  landmark[1] - roi_size_half:landmark[1] + roi_size_half,
+                  landmark[0] - roi_size_half:landmark[0] + roi_size_half
+                  ]
+            return img
+
+        # 眼两点，嘴两点
+        def getRois(img, *landmarks):
+            if not len(landmarks) in [1, 2]:
+                raise Exception('para num error')
+            elif len(landmarks) == 1:
+                landmark = landmarks[0]
+                roi_size_half = min(landmark[0],
+                                    landmark[1],
+                                    img.shape[0] - landmark[1],
+                                    img.shape[1] - landmark[0],
+                                    img.shape[0] // 4
+                                    )
+                img = img[
+                      landmark[1] - roi_size_half:landmark[1] + roi_size_half,
+                      landmark[0] - roi_size_half:landmark[0] + roi_size_half
+                      ]
+                return img
+
+            elif len(landmarks) == 2:
+                # 正方形区域的半边长
+                left_landmark = landmarks[0]
+                right_landmark = landmarks[1]
+                roi_size_half = min(left_landmark[0],
+                                    left_landmark[1],
+                                    img.shape[0] - left_landmark[1],
+                                    img.shape[1] - left_landmark[0],
+                                    right_landmark[0],
+                                    right_landmark[1],
+                                    img.shape[0] - right_landmark[1],
+                                    img.shape[1] - right_landmark[0]
+                                    )
+                left_img = img[
+                           left_landmark[1] - roi_size_half:left_landmark[1] + roi_size_half,
+                           left_landmark[0] - roi_size_half:left_landmark[0] + roi_size_half
+                           ]
+                right_img = img[
+                            right_landmark[1] - roi_size_half:right_landmark[1] + roi_size_half,
+                            right_landmark[0] - roi_size_half:right_landmark[0] + roi_size_half
+                            ]
+                return left_img, right_img
 
         if self.patch_to_process == 0:
             raise Exception("you can't generate origin dataset")
@@ -150,7 +185,7 @@ class DataSetPreProcessor():
                     img = cv2.imread(origin_img_path)
                     img = cv2.resize(img, (31, 31))
                     cv2.imwrite(dst_img_path, img)
-
+            # 两只眼睛
             if self.patch_to_process in [2, 3]:
                 if not os.path.exists(patch_2_path + people):
                     os.mkdir(patch_2_path + people)
@@ -164,11 +199,26 @@ class DataSetPreProcessor():
                     left_landmark = face_alignment.alignment(img)[0]
                     right_landmark = face_alignment.alignment(img)[1]
                     try:
-                        left_img, right_img = getRoi(img, left_landmark, right_landmark)
+                        left_img, right_img = getRois(img, left_landmark, right_landmark)
                         left_img = cv2.resize(left_img, (31, 31))
                         right_img = cv2.resize(right_img, (31, 31))
                         cv2.imwrite(left_dst_img_path, left_img)
                         cv2.imwrite(right_dst_img_path, right_img)
+                    except:
+                        print('Something wrong happens ...')
+            # 鼻尖
+            if self.patch_to_process == 4:
+                if not os.path.exists(patch_4_path + people):
+                    os.mkdir(patch_4_path + people)
+                for img_name in os.listdir(dataset_path + people):
+                    origin_img_path = os.path.join(dataset_path + people, img_name)
+                    dst_img_path = os.path.join(patch_4_path + people, img_name)
+                    img = cv2.imread(origin_img_path)
+                    landmark = face_alignment.alignment(img)[2]
+                    try:
+                        img = getRois(img, landmark)
+                        img = cv2.resize(img, (31, 31))
+                        cv2.imwrite(dst_img_path, img)
                     except:
                         print('Something wrong happens ...')
 
@@ -336,34 +386,104 @@ class DataSetPreProcessor():
 
     # 生成用于训练deepid的pickle（和tfrecorder 二选一）
     def generate_pickle_for_deepid(self):
+        # 生成train集的pickle
+        img_pathList = []
+        labelList = []
         if self.patch_to_process == 1:
             img_pathList, labelList = read_csv('data/patch_1_for_deepid_train.csv')
-            count = 0
-            num = len(img_pathList)
-            imgList = []
-            for img_path in img_pathList:
-                count += 1
-                print('reading...', count, '/', num)
-                img = cv2.imread(img_path)
-                imgList.append(img)
-            imgArr = np.asarray(imgList, dtype='uint8')
-            labelArr = np.asarray(labelList, dtype='float32')
+        elif self.patch_to_process == 2:
+            img_pathList, labelList = read_csv('data/patch_2_for_deepid_train.csv')
+        elif self.patch_to_process == 3:
+            img_pathList, labelList = read_csv('data/patch_3_for_deepid_train.csv')
+        elif self.patch_to_process == 4:
+            img_pathList, labelList = read_csv('data/patch_4_for_deepid_train.csv')
+        elif self.patch_to_process == 5:
+            img_pathList, labelList = read_csv('data/patch_5_for_deepid_train.csv')
+        elif self.patch_to_process == 6:
+            img_pathList, labelList = read_csv('data/patch_6_for_deepid_train.csv')
+
+        count = 0
+        num = len(img_pathList)
+        imgList = []
+        for img_path in img_pathList:
+            count += 1
+            print('reading...', count, '/', num)
+            img = cv2.imread(img_path)
+            imgList.append(img)
+        imgArr = np.asarray(imgList, dtype='uint8')
+        labelArr = np.asarray(labelList, dtype='float32')
+
+        if self.patch_to_process == 1:
             with open('data/patch_1_train.pkl', 'wb') as f:
                 pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
                 pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
-
+        elif self.patch_to_process == 2:
+            with open('data/patch_2_train.pkl', 'wb') as f:
+                pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
+        elif self.patch_to_process == 3:
+            with open('data/patch_3_train.pkl', 'wb') as f:
+                pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
+        elif self.patch_to_process == 4:
+            with open('data/patch_4_train.pkl', 'wb') as f:
+                pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
+        elif self.patch_to_process == 5:
+            with open('data/patch_5_train.pkl', 'wb') as f:
+                pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
+        elif self.patch_to_process == 6:
+            with open('data/patch_6_train.pkl', 'wb') as f:
+                pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
+        # 生成valid集的pickle
+        if self.patch_to_process == 1:
             img_pathList, labelList = read_csv('data/patch_1_for_deepid_valid.csv')
-            count = 0
-            num = len(img_pathList)
-            imgList = []
-            for img_path in img_pathList:
-                count += 1
-                print('reading...', count, '/', num)
-                img = cv2.imread(img_path)
-                imgList.append(img)
-            imgArr = np.asarray(imgList, dtype='uint8')
-            labelArr = np.asarray(labelList, dtype='float32')
+        elif self.patch_to_process == 2:
+            img_pathList, labelList = read_csv('data/patch_2_for_deepid_valid.csv')
+        elif self.patch_to_process == 3:
+            img_pathList, labelList = read_csv('data/patch_3_for_deepid_valid.csv')
+        elif self.patch_to_process == 4:
+            img_pathList, labelList = read_csv('data/patch_4_for_deepid_valid.csv')
+        elif self.patch_to_process == 5:
+            img_pathList, labelList = read_csv('data/patch_5_for_deepid_valid.csv')
+        elif self.patch_to_process == 6:
+            img_pathList, labelList = read_csv('data/patch_6_for_deepid_valid.csv')
+        count = 0
+        num = len(img_pathList)
+
+        imgList = []
+        for img_path in img_pathList:
+            count += 1
+            print('reading...', count, '/', num)
+            img = cv2.imread(img_path)
+            imgList.append(img)
+        imgArr = np.asarray(imgList, dtype='uint8')
+        labelArr = np.asarray(labelList, dtype='float32')
+
+        if self.patch_to_process == 1:
             with open('data/patch_1_valid.pkl', 'wb') as f:
+                pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
+        elif self.patch_to_process == 2:
+            with open('data/patch_2_valid.pkl', 'wb') as f:
+                pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
+        elif self.patch_to_process == 3:
+            with open('data/patch_3_valid.pkl', 'wb') as f:
+                pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
+        elif self.patch_to_process == 4:
+            with open('data/patch_4_valid.pkl', 'wb') as f:
+                pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
+        elif self.patch_to_process == 5:
+            with open('data/patch_5_valid.pkl', 'wb') as f:
+                pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
+        elif self.patch_to_process == 6:
+            with open('data/patch_6_valid.pkl', 'wb') as f:
                 pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
                 pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
 
@@ -380,9 +500,8 @@ class DataSetPreProcessor():
         else:
             return False
 
-    # 清洗数据 去掉混进来奇怪的东西（非脸 非rgb）
+    # 清洗数据 去掉混进来奇怪的东西（非人脸 非rgb）
     def wash_data(self):
-        delete_count = 0
         people_count = 0
         img_count = 0
         people_num = len(os.listdir(dataset_path))
@@ -398,7 +517,6 @@ class DataSetPreProcessor():
                 img = cv2.imread(img_path)
                 if not self.is_face(img):
                     os.remove(img_path)
-                    delete_count += 1
                     print('delete..............................')
 
         self.generate_csv_for_deepid()
@@ -406,11 +524,10 @@ class DataSetPreProcessor():
 
 
 if __name__ == '__main__':
-    processor = DataSetPreProcessor(2)
+    processor = DataSetPreProcessor(4)
     # processor.generate_patch()
-    # processor.generate_csv_for_deepid()
-    # processor.generate_csv_for_verification_model()
-    # processor.generate_pickle_for_deepid()
+    processor.generate_csv_for_deepid()
+    processor.generate_csv_for_verification_model()
     # processor.generate_recorder_for_deepid()
     # processor.wash_data()
-    processor.generate_patch()
+    processor.generate_pickle_for_deepid()

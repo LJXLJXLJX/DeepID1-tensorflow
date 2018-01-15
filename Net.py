@@ -3,11 +3,12 @@ CNN通用模版 有十个子类 分别对应十个patch的输入
 这十个子类又分别有三个子类 分别对应三种尺度
 这三个子类又有
 '''
-
+import os
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import numpy as np
 import tensorflow as tf
 import time
-import os
 import cv2
 import dataSetPreProcess
 import pickle
@@ -242,9 +243,8 @@ class grayCNN(CNN):
 
 
 if __name__ == '__main__':
-    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
     processor = dataSetPreProcess.DataSetPreProcessor(0)
     class_num = processor.people_num_for_deepid
     cnn = CNN()
-    cnn.train_patch_from_pickle('patch_1')
+    cnn.train_patch_from_pickle('patch_4')
