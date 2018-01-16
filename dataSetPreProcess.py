@@ -19,6 +19,12 @@ if platform.system() == 'Windows':
     patch_4_path = './DataSet/patch_4/'
     patch_5_path = './DataSet/patch_5/'
     patch_6_path = './DataSet/patch_6/'
+    patch_7_path = './DataSet/patch_7'
+    patch_8_path = './DataSet/patch_8'
+    patch_9_path = './DataSet/patch_9'
+    patch_10_path = './DataSet/patch_10'
+    patch_11_path = './DataSet/patch_11'
+    patch_12_path = './DataSet/patch_12'
 
 # 如果当前调试系统是Linux（服务器），切换到相应路径
 elif platform.system() == 'Linux':
@@ -30,6 +36,12 @@ elif platform.system() == 'Linux':
     patch_4_path = userRoot + '/DataSet/patch_4/'
     patch_5_path = userRoot + '/DataSet/patch_5/'
     patch_6_path = userRoot + '/DataSet/patch_6/'
+    patch_7_path = userRoot + '/DataSet/patch_7'
+    patch_8_path = userRoot + '/DataSet/patch_8'
+    patch_9_path = userRoot + '/DataSet/patch_9'
+    patch_10_path = userRoot + '/DataSet/patch_10'
+    patch_11_path = userRoot + '/DataSet/patch_11'
+    patch_12_path = userRoot + '/DataSet/patch_12'
 
 
 # 读取csv文件
@@ -74,6 +86,20 @@ class DataSetPreProcessor():
             os.mkdir(patch_5_path)
         if not os.path.exists(patch_6_path):
             os.mkdir(patch_6_path)
+        if not os.path.exists(patch_6_path):
+            os.mkdir(patch_6_path)
+        if not os.path.exists(patch_6_path):
+            os.mkdir(patch_7_path)
+        if not os.path.exists(patch_6_path):
+            os.mkdir(patch_8_path)
+        if not os.path.exists(patch_6_path):
+            os.mkdir(patch_9_path)
+        if not os.path.exists(patch_6_path):
+            os.mkdir(patch_10_path)
+        if not os.path.exists(patch_6_path):
+            os.mkdir(patch_11_path)
+        if not os.path.exists(patch_6_path):
+            os.mkdir(patch_12_path)
 
         if self.patch_to_process == 0:
             self.people_list = os.listdir(dataset_path)  # 所有人的列表
@@ -89,6 +115,18 @@ class DataSetPreProcessor():
             self.people_list = os.listdir(patch_5_path)
         elif self.patch_to_process == 6:
             self.people_list = os.listdir(patch_6_path)
+        elif self.patch_to_process == 7:
+            self.people_list = os.listdir(patch_7_path)
+        elif self.patch_to_process == 8:
+            self.people_list = os.listdir(patch_8_path)
+        elif self.patch_to_process == 9:
+            self.people_list = os.listdir(patch_9_path)
+        elif self.patch_to_process == 10:
+            self.people_list = os.listdir(patch_10_path)
+        elif self.patch_to_process == 11:
+            self.people_list = os.listdir(patch_11_path)
+        elif self.patch_to_process == 12:
+            self.people_list = os.listdir(patch_12_path)
 
         # 以下list的每个元素为tuple
         self.people_list = list(enumerate(self.people_list))  # 每个元素转成tuple 相当于打标签
@@ -221,6 +259,27 @@ class DataSetPreProcessor():
                         cv2.imwrite(dst_img_path, img)
                     except:
                         print('Something wrong happens ...')
+            # 两个嘴角
+            if self.patch_to_process in [5, 6]:
+                if not os.path.exists(patch_5_path + people):
+                    os.mkdir(patch_5_path + people)
+                if not os.path.exists(patch_6_path + people):
+                    os.mkdir(patch_6_path + people)
+                for img_name in os.listdir(dataset_path + people):
+                    origin_img_path = os.path.join(dataset_path + people, img_name)
+                    left_dst_img_path = os.path.join(patch_5_path + people, img_name)
+                    right_dst_img_path = os.path.join(patch_6_path + people, img_name)
+                    img = cv2.imread(origin_img_path)
+                    left_landmark = face_alignment.alignment(img)[3]
+                    right_landmark = face_alignment.alignment(img)[4]
+                    try:
+                        left_img, right_img = getRois(img, left_landmark, right_landmark)
+                        left_img = cv2.resize(left_img, (31, 31))
+                        right_img = cv2.resize(right_img, (31, 31))
+                        cv2.imwrite(left_dst_img_path, left_img)
+                        cv2.imwrite(right_dst_img_path, right_img)
+                    except:
+                        print('Something wrong happens ...')
 
     # 构建用于训练deepid的csv
     def generate_csv_for_deepid(self):
@@ -242,6 +301,18 @@ class DataSetPreProcessor():
                 people_imgs = self.get_pics_for_one_people(patch_5_path + people)
             elif self.patch_to_process == 6:
                 people_imgs = self.get_pics_for_one_people(patch_6_path + people)
+            elif self.patch_to_process == 7:
+                people_imgs = self.get_pics_for_one_people(patch_7_path + people)
+            elif self.patch_to_process == 8:
+                people_imgs = self.get_pics_for_one_people(patch_8_path + people)
+            elif self.patch_to_process == 9:
+                people_imgs = self.get_pics_for_one_people(patch_9_path + people)
+            elif self.patch_to_process == 10:
+                people_imgs = self.get_pics_for_one_people(patch_10_path + people)
+            elif self.patch_to_process == 11:
+                people_imgs = self.get_pics_for_one_people(patch_11_path + people)
+            elif self.patch_to_process == 12:
+                people_imgs = self.get_pics_for_one_people(patch_12_path + people)
 
             people_imgs_for_train = people_imgs[0:9 * len(people_imgs) // 10]  # 取其中9/10作为训练集
             people_imgs_for_valid = people_imgs[9 * len(people_imgs) // 10:]  # 其中1/10作为验证（防止过拟合）
@@ -266,7 +337,6 @@ class DataSetPreProcessor():
             with open('data/patch_1_for_deepid_valid.csv', 'w') as f:
                 for item in dataset_for_deepid_valid:
                     print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
-
         elif self.patch_to_process == 2:
             with open('data/patch_2_for_deepid_train.csv', 'w') as f:
                 for item in dataset_for_deepid_train:
@@ -302,9 +372,52 @@ class DataSetPreProcessor():
             with open('data/patch_6_for_deepid_valid.csv', 'w') as f:
                 for item in dataset_for_deepid_valid:
                     print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
+        elif self.patch_to_process == 7:
+            with open('data/patch_7_for_deepid_train.csv', 'w') as f:
+                for item in dataset_for_deepid_train:
+                    print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
+            with open('data/patch_7_for_deepid_valid.csv', 'w') as f:
+                for item in dataset_for_deepid_valid:
+                    print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
+        elif self.patch_to_process == 8:
+            with open('data/patch_8_for_deepid_train.csv', 'w') as f:
+                for item in dataset_for_deepid_train:
+                    print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
+            with open('data/patch_8_for_deepid_valid.csv', 'w') as f:
+                for item in dataset_for_deepid_valid:
+                    print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
+        elif self.patch_to_process == 9:
+            with open('data/patch_9_for_deepid_train.csv', 'w') as f:
+                for item in dataset_for_deepid_train:
+                    print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
+            with open('data/patch_9_for_deepid_valid.csv', 'w') as f:
+                for item in dataset_for_deepid_valid:
+                    print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
+        elif self.patch_to_process == 10:
+            with open('data/patch_10_for_deepid_train.csv', 'w') as f:
+                for item in dataset_for_deepid_train:
+                    print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
+            with open('data/patch_10_for_deepid_valid.csv', 'w') as f:
+                for item in dataset_for_deepid_valid:
+                    print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
+        elif self.patch_to_process == 11:
+            with open('data/patch_11_for_deepid_train.csv', 'w') as f:
+                for item in dataset_for_deepid_train:
+                    print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
+            with open('data/patch_11_for_deepid_valid.csv', 'w') as f:
+                for item in dataset_for_deepid_valid:
+                    print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
+        elif self.patch_to_process == 12:
+            with open('data/patch_12_for_deepid_train.csv', 'w') as f:
+                for item in dataset_for_deepid_train:
+                    print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
+            with open('data/patch_12_for_deepid_valid.csv', 'w') as f:
+                for item in dataset_for_deepid_valid:
+                    print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
+
         self.update_dataset_imformation()
 
-    # 构建用于训练验证模型的csv
+    # 构建用于训练验证模型的csv  （问题很大）要改
     def generate_csv_for_verification_model(self):
         self.update_dataset_imformation()
         dataset_for_verification_model = []
@@ -323,7 +436,20 @@ class DataSetPreProcessor():
                 people_imgs = self.get_pics_for_one_people(patch_5_path + people)
             elif self.patch_to_process == 6:
                 people_imgs = self.get_pics_for_one_people(patch_6_path + people)
+            elif self.patch_to_process == 7:
+                people_imgs = self.get_pics_for_one_people(patch_7_path + people)
+            elif self.patch_to_process == 8:
+                people_imgs = self.get_pics_for_one_people(patch_8_path + people)
+            elif self.patch_to_process == 9:
+                people_imgs = self.get_pics_for_one_people(patch_9_path + people)
+            elif self.patch_to_process == 10:
+                people_imgs = self.get_pics_for_one_people(patch_10_path + people)
+            elif self.patch_to_process == 11:
+                people_imgs = self.get_pics_for_one_people(patch_11_path + people)
+            elif self.patch_to_process == 12:
+                people_imgs = self.get_pics_for_one_people(patch_12_path + people)
             dataset_for_verification_model += zip(people_imgs, [str(label)] * len(people_imgs))
+
         random.shuffle(dataset_for_verification_model)
         if self.patch_to_process == 0:
             with open('data/dataset_for_verification_model.csv', 'w') as f:
@@ -353,6 +479,31 @@ class DataSetPreProcessor():
             with open('data/patch_6_for_verification_model.csv', 'w') as f:
                 for item in dataset_for_verification_model:
                     print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
+        elif self.patch_to_process == 7:
+            with open('data/patch_7_for_verification_model.csv', 'w') as f:
+                for item in dataset_for_verification_model:
+                    print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
+        elif self.patch_to_process == 8:
+            with open('data/patch_8_for_verification_model.csv', 'w') as f:
+                for item in dataset_for_verification_model:
+                    print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
+        elif self.patch_to_process == 9:
+            with open('data/patch_9_for_verification_model.csv', 'w') as f:
+                for item in dataset_for_verification_model:
+                    print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
+        elif self.patch_to_process == 10:
+            with open('data/patch_10_for_verification_model.csv', 'w') as f:
+                for item in dataset_for_verification_model:
+                    print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
+        elif self.patch_to_process == 11:
+            with open('data/patch_11_for_verification_model.csv', 'w') as f:
+                for item in dataset_for_verification_model:
+                    print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
+        elif self.patch_to_process == 12:
+            with open('data/patch_12_for_verification_model.csv', 'w') as f:
+                for item in dataset_for_verification_model:
+                    print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
+
         self.update_dataset_imformation()
 
     # 生成用于训练deepid的tfrecords
@@ -401,6 +552,18 @@ class DataSetPreProcessor():
             img_pathList, labelList = read_csv('data/patch_5_for_deepid_train.csv')
         elif self.patch_to_process == 6:
             img_pathList, labelList = read_csv('data/patch_6_for_deepid_train.csv')
+        elif self.patch_to_process == 7:
+            img_pathList, labelList = read_csv('data/patch_7_for_deepid_train.csv')
+        elif self.patch_to_process == 8:
+            img_pathList, labelList = read_csv('data/patch_8_for_deepid_train.csv')
+        elif self.patch_to_process == 9:
+            img_pathList, labelList = read_csv('data/patch_9_for_deepid_train.csv')
+        elif self.patch_to_process == 10:
+            img_pathList, labelList = read_csv('data/patch_10_for_deepid_train.csv')
+        elif self.patch_to_process == 11:
+            img_pathList, labelList = read_csv('data/patch_11_for_deepid_train.csv')
+        elif self.patch_to_process == 12:
+            img_pathList, labelList = read_csv('data/patch_12_for_deepid_train.csv')
 
         count = 0
         num = len(img_pathList)
@@ -437,6 +600,31 @@ class DataSetPreProcessor():
             with open('data/patch_6_train.pkl', 'wb') as f:
                 pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
                 pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
+        elif self.patch_to_process == 7:
+            with open('data/patch_7_train.pkl', 'wb') as f:
+                pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
+        elif self.patch_to_process == 8:
+            with open('data/patch_8_train.pkl', 'wb') as f:
+                pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
+        elif self.patch_to_process == 9:
+            with open('data/patch_9_train.pkl', 'wb') as f:
+                pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
+        elif self.patch_to_process == 10:
+            with open('data/patch_10_train.pkl', 'wb') as f:
+                pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
+        elif self.patch_to_process == 11:
+            with open('data/patch_11_train.pkl', 'wb') as f:
+                pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
+        elif self.patch_to_process == 12:
+            with open('data/patch_12_train.pkl', 'wb') as f:
+                pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
+
         # 生成valid集的pickle
         if self.patch_to_process == 1:
             img_pathList, labelList = read_csv('data/patch_1_for_deepid_valid.csv')
@@ -450,6 +638,19 @@ class DataSetPreProcessor():
             img_pathList, labelList = read_csv('data/patch_5_for_deepid_valid.csv')
         elif self.patch_to_process == 6:
             img_pathList, labelList = read_csv('data/patch_6_for_deepid_valid.csv')
+        elif self.patch_to_process == 7:
+            img_pathList, labelList = read_csv('data/patch_7_for_deepid_valid.csv')
+        elif self.patch_to_process == 8:
+            img_pathList, labelList = read_csv('data/patch_8_for_deepid_valid.csv')
+        elif self.patch_to_process == 9:
+            img_pathList, labelList = read_csv('data/patch_9_for_deepid_valid.csv')
+        elif self.patch_to_process == 10:
+            img_pathList, labelList = read_csv('data/patch_10_for_deepid_valid.csv')
+        elif self.patch_to_process == 11:
+            img_pathList, labelList = read_csv('data/patch_11_for_deepid_valid.csv')
+        elif self.patch_to_process == 12:
+            img_pathList, labelList = read_csv('data/patch_12_for_deepid_valid.csv')
+
         count = 0
         num = len(img_pathList)
 
@@ -483,6 +684,30 @@ class DataSetPreProcessor():
                 pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
                 pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
         elif self.patch_to_process == 6:
+            with open('data/patch_6_valid.pkl', 'wb') as f:
+                pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
+        elif self.patch_to_process == 7:
+            with open('data/patch_7_valid.pkl', 'wb') as f:
+                pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
+        elif self.patch_to_process == 8:
+            with open('data/patch_8_valid.pkl', 'wb') as f:
+                pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
+        elif self.patch_to_process == 9:
+            with open('data/patch_9_valid.pkl', 'wb') as f:
+                pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
+        elif self.patch_to_process == 10:
+            with open('data/patch_10_valid.pkl', 'wb') as f:
+                pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
+        elif self.patch_to_process == 11:
+            with open('data/patch_5_valid.pkl', 'wb') as f:
+                pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
+        elif self.patch_to_process == 12:
             with open('data/patch_6_valid.pkl', 'wb') as f:
                 pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
                 pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
@@ -524,7 +749,7 @@ class DataSetPreProcessor():
 
 
 if __name__ == '__main__':
-    processor = DataSetPreProcessor(4)
+    processor = DataSetPreProcessor(5)
     # processor.generate_patch()
     processor.generate_csv_for_deepid()
     processor.generate_csv_for_verification_model()
