@@ -118,12 +118,18 @@ def get_batch_from_arr(imgArr, labelArr, start):
 
 # 构建输入为彩色图像网络结构
 class CNN():
-    def __init__(self):
+    def __init__(self, input_mode):
         with tf.name_scope('input'):
-            self.h0 = tf.placeholder(tf.float32, [None, 31, 31, 3], name='x')  # 输入
+            if input_mode in ['rgb', 'RGB']:
+                self.h0 = tf.placeholder(tf.float32, [None, 31, 31, 3], name='x')  # 输入
+            elif input_mode in ['gray', 'GRAY']:
+                self.h0 = tf.placeholder(tf.float32, [None, 31, 31, 1], name='x')  # 输入
             self.y_ = tf.placeholder(tf.float32, [None, class_num], name='y')  # 分类结果  onehot码
 
-        self.h1 = conv_pool_layer(self.h0, [4, 4, 3, 20], [20], 'Conv_layer_1')
+        if input_mode in ['rgb', 'RGB']:
+            self.h1 = conv_pool_layer(self.h0, [4, 4, 3, 20], [20], 'Conv_layer_1')
+        if input_mode in ['gray', 'GRAY']:
+            self.h1 = conv_pool_layer(self.h0, [4, 4, 1, 20], [20], 'Conv_layer_1')
         self.h2 = conv_pool_layer(self.h1, [3, 3, 20, 40], [40], 'Conv_layer_2')
         self.h3 = conv_pool_layer(self.h2, [3, 3, 40, 60], [60], 'Conv_layer_3')
         self.h4 = conv_pool_layer(self.h3, [2, 2, 60, 80], [80], 'Conv_layer_4', only_conv=True)
@@ -232,19 +238,19 @@ class CNN():
 
 
 # 构建输入为灰度图像的网络结构（继承自CNN）
-class grayCNN(CNN):
-    def __init__(self):
-        super().__init__()
-        # 灰度图像的输入深度和第一个卷积层要改 其余的结构与超类彩色一致
-        with tf.name_scope('input'):
-            self.h0 = tf.placeholder(tf.float32, [None, 31, 31, 1], name='x')  # 输入
-            self.y_ = tf.placeholder(tf.float32, [None, class_num], name='y')  # 分类结果  onehot码
-
-        self.h1 = conv_pool_layer(self.h0, [4, 4, 1, 20], [20], 'Conv_layer_1')
+# class grayCNN(CNN):
+#     def __init__(self):
+#         super().__init__()
+#         # 灰度图像的输入深度和第一个卷积层要改 其余的结构与超类彩色一致
+#         with tf.name_scope('input'):
+#             self.h0 = tf.placeholder(tf.float32, [None, 31, 31, 1], name='x')  # 输入
+#
+#         self.h1 = conv_pool_layer(self.h0, [4, 4, 1, 20], [20], 'Conv_layer_1')
 
 
 if __name__ == '__main__':
     processor = dataSetPreProcess.DataSetPreProcessor(0)
     class_num = processor.people_num_for_deepid
-    cnn = CNN()
-    cnn.train_patch_from_pickle('patch_6')
+    cnn = CNN('gray')
+
+    cnn.train_patch_from_pickle('patch_7')

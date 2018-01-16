@@ -19,12 +19,12 @@ if platform.system() == 'Windows':
     patch_4_path = './DataSet/patch_4/'
     patch_5_path = './DataSet/patch_5/'
     patch_6_path = './DataSet/patch_6/'
-    patch_7_path = './DataSet/patch_7'
-    patch_8_path = './DataSet/patch_8'
-    patch_9_path = './DataSet/patch_9'
-    patch_10_path = './DataSet/patch_10'
-    patch_11_path = './DataSet/patch_11'
-    patch_12_path = './DataSet/patch_12'
+    patch_7_path = './DataSet/patch_7/'
+    patch_8_path = './DataSet/patch_8/'
+    patch_9_path = './DataSet/patch_9/'
+    patch_10_path = './DataSet/patch_10/'
+    patch_11_path = './DataSet/patch_11/'
+    patch_12_path = './DataSet/patch_12/'
 
 # 如果当前调试系统是Linux（服务器），切换到相应路径
 elif platform.system() == 'Linux':
@@ -36,12 +36,12 @@ elif platform.system() == 'Linux':
     patch_4_path = userRoot + '/DataSet/patch_4/'
     patch_5_path = userRoot + '/DataSet/patch_5/'
     patch_6_path = userRoot + '/DataSet/patch_6/'
-    patch_7_path = userRoot + '/DataSet/patch_7'
-    patch_8_path = userRoot + '/DataSet/patch_8'
-    patch_9_path = userRoot + '/DataSet/patch_9'
-    patch_10_path = userRoot + '/DataSet/patch_10'
-    patch_11_path = userRoot + '/DataSet/patch_11'
-    patch_12_path = userRoot + '/DataSet/patch_12'
+    patch_7_path = userRoot + '/DataSet/patch_7/'
+    patch_8_path = userRoot + '/DataSet/patch_8/'
+    patch_9_path = userRoot + '/DataSet/patch_9/'
+    patch_10_path = userRoot + '/DataSet/patch_10/'
+    patch_11_path = userRoot + '/DataSet/patch_11/'
+    patch_12_path = userRoot + '/DataSet/patch_12/'
 
 
 # 读取csv文件
@@ -65,7 +65,7 @@ def read_csv(csv_path):
 
 class DataSetPreProcessor():
     def __init__(self, patchID):
-        if patchID not in [0, 1, 2, 3, 4, 5, 6]:
+        if patchID not in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]:
             raise Exception('patch号错误')
         self.patch_to_process = patchID
         self.update_dataset_imformation()
@@ -571,7 +571,8 @@ class DataSetPreProcessor():
         for img_path in img_pathList:
             count += 1
             print('reading...', count, '/', num)
-            img = cv2.imread(img_path)
+            img = cv2.imread(img_path, -1)
+            img.resize(31, 31, 1)
             imgList.append(img)
         imgArr = np.asarray(imgList, dtype='uint8')
         labelArr = np.asarray(labelList, dtype='float32')
@@ -658,7 +659,8 @@ class DataSetPreProcessor():
         for img_path in img_pathList:
             count += 1
             print('reading...', count, '/', num)
-            img = cv2.imread(img_path)
+            img = cv2.imread(img_path, -1)
+            img.resize(31, 31, 1)
             imgList.append(img)
         imgArr = np.asarray(imgList, dtype='uint8')
         labelArr = np.asarray(labelList, dtype='float32')
@@ -749,7 +751,7 @@ class DataSetPreProcessor():
 
 
 if __name__ == '__main__':
-    processor = DataSetPreProcessor(5)
+    processor = DataSetPreProcessor(7)
     # processor.generate_patch()
     processor.generate_csv_for_deepid()
     processor.generate_csv_for_verification_model()
