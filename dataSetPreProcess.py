@@ -214,6 +214,7 @@ class DataSetPreProcessor():
             people = people[1]
             people_count += 1
             print('Generating...', people_count, '/', people_num)
+            #原图reshape
             if self.patch_to_process == 1:
                 if not os.path.exists(patch_1_path + people):
                     os.mkdir(patch_1_path + people)
@@ -572,7 +573,8 @@ class DataSetPreProcessor():
             count += 1
             print('reading...', count, '/', num)
             img = cv2.imread(img_path, -1)
-            img.resize(31, 31, 1)
+            if img.shape==(31,31):
+                img.resize(31, 31, 1)
             imgList.append(img)
         imgArr = np.asarray(imgList, dtype='uint8')
         labelArr = np.asarray(labelList, dtype='float32')
@@ -660,7 +662,8 @@ class DataSetPreProcessor():
             count += 1
             print('reading...', count, '/', num)
             img = cv2.imread(img_path, -1)
-            img.resize(31, 31, 1)
+            if img.shape == (31, 31):
+                img.resize(31, 31, 1)
             imgList.append(img)
         imgArr = np.asarray(imgList, dtype='uint8')
         labelArr = np.asarray(labelList, dtype='float32')
@@ -706,11 +709,11 @@ class DataSetPreProcessor():
                 pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
                 pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
         elif self.patch_to_process == 11:
-            with open('data/patch_5_valid.pkl', 'wb') as f:
+            with open('data/patch_11_valid.pkl', 'wb') as f:
                 pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
                 pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
         elif self.patch_to_process == 12:
-            with open('data/patch_6_valid.pkl', 'wb') as f:
+            with open('data/patch_12_valid.pkl', 'wb') as f:
                 pickle.dump(imgArr, f, pickle.HIGHEST_PROTOCOL)
                 pickle.dump(labelArr, f, pickle.HIGHEST_PROTOCOL)
 
@@ -751,7 +754,7 @@ class DataSetPreProcessor():
 
 
 if __name__ == '__main__':
-    processor = DataSetPreProcessor(7)
+    processor = DataSetPreProcessor(8)
     # processor.generate_patch()
     processor.generate_csv_for_deepid()
     processor.generate_csv_for_verification_model()

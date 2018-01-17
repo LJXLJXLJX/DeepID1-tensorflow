@@ -237,15 +237,7 @@ class CNN():
                     self.saver.save(sess, 'checkpoint/' + patch_name + '.ckpt')
 
 
-# 构建输入为灰度图像的网络结构（继承自CNN）
-# class grayCNN(CNN):
-#     def __init__(self):
-#         super().__init__()
-#         # 灰度图像的输入深度和第一个卷积层要改 其余的结构与超类彩色一致
-#         with tf.name_scope('input'):
-#             self.h0 = tf.placeholder(tf.float32, [None, 31, 31, 1], name='x')  # 输入
-#
-#         self.h1 = conv_pool_layer(self.h0, [4, 4, 1, 20], [20], 'Conv_layer_1')
+
 
 
 if __name__ == '__main__':
