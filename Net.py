@@ -11,8 +11,9 @@ import numpy as np
 import tensorflow as tf
 import time
 import cv2
-import dataSetPreProcess
+import dataSetPreProcessRe
 import pickle
+import shutil
 
 
 # 高斯截断初始化w
@@ -210,21 +211,22 @@ class CNN():
         labelArrValid = (np.arange(class_num) == labelArrValid[:, None]).astype(np.float32)
 
         logdir = 'log'
-        # if tf.gfile.Exists(logdir):
-        #     tf.gfile.DeleteRecursively(logdir)
-        # tf.gfile.MakeDirs(logdir)
+        patch_logdir=os.path.join(logdir,patch_name)
+        if os.path.exists(patch_logdir):
+            shutil.rmtree(patch_logdir)
+            os.mkdir(patch_logdir)
+
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
             sess.run(tf.local_variables_initializer())
             # self.saver.restore(sess, 'checkpoint/patch_5.ckpt')
             train_writer = tf.summary.FileWriter(logdir + '/' + patch_name + '/train', sess.graph)
             valid_writer = tf.summary.FileWriter(logdir + '/' + patch_name + '/valid', sess.graph)
-
             idx = 0
             count = 0
-            for i in range(100000):
+            for i in range(50000):
                 count += 1
-                print('training...', count, '/100000')
+                print('training...', count, '/50000')
                 batch_x, batch_y, idx = get_batch_from_arr(imgArrTrain, labelArrTrain, idx)
                 # 分类训练集
                 summary, _ = sess.run([self.merged, self.train_step], {self.h0: batch_x, self.y_: batch_y})
@@ -241,8 +243,7 @@ class CNN():
 
 
 if __name__ == '__main__':
-    processor = dataSetPreProcess.DataSetPreProcessor(0)
-    class_num = processor.people_num_for_deepid
+    patch_name='patch_12'
+    class_num=dataSetPreProcessRe.update_dataset_imformation('images')[4]
     cnn = CNN('gray')
-
-    cnn.train_patch_from_pickle('patch_7')
+    cnn.train_patch_from_pickle(patch_name)

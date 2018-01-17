@@ -6,6 +6,7 @@ import cv2
 import face_alignment
 import pickle
 import platform
+import re
 
 
 # 得到当前路径
@@ -26,12 +27,14 @@ def update_dataset_imformation(patch_name):
     if not os.path.exists(patch_path):
         os.mkdir(patch_path)
     people_list = os.listdir(patch_path)
-    people_list = list(enumerate(people_list))
+    #people_list = list(enumerate(people_list))
     people_num = len(people_list)
     people_num_for_deepid = people_num * 4 // 5  # 用于训练deepid的人数
     people_num_for_verification_model = people_num - people_num_for_deepid  # 用于验证模型的人数
     people_list_for_deepid = people_list[0:people_num_for_deepid]
+    people_list_for_deepid=list(enumerate(people_list_for_deepid))
     people_list_for_verification_model = people_list[people_num_for_deepid:]
+    people_list_for_verification_model=list(enumerate(people_list_for_verification_model))
     return people_list, \
            people_list_for_deepid, \
            people_list_for_verification_model, \
@@ -92,12 +95,12 @@ def generate_patch(patch_name):
         people = people[1]
         people_count += 1
         print('Generating...', people_count, '/', people_num)
-        #原图改变尺寸
+        # 原图改变尺寸
         if patch_name == 'patch_1':
             patch_path = get_patch_path(patch_name)
             if not os.path.exists(patch_path):
                 os.mkdir(patch_path)
-            for img_name in os.listdir(os.path.join(dataset_path,people)):
+            for img_name in os.listdir(os.path.join(dataset_path, people)):
                 origin_img_path = os.path.join(dataset_path, people, img_name)
                 dst_img_path = os.path.join(patch_path, people, img_name)
                 img = cv2.imread(origin_img_path)
@@ -154,9 +157,9 @@ def generate_patch(patch_name):
             if not os.path.exists(os.path.join(patch_6_path, people)):
                 os.mkdir(os.path.join(patch_6_path, people))
             for img_name in os.listdir(os.path.join(dataset_path, people)):
-                origin_img_path = os.path.join(dataset_path , people, img_name)
-                left_dst_img_path = os.path.join(patch_5_path , people, img_name)
-                right_dst_img_path = os.path.join(patch_6_path , people, img_name)
+                origin_img_path = os.path.join(dataset_path, people, img_name)
+                left_dst_img_path = os.path.join(patch_5_path, people, img_name)
+                right_dst_img_path = os.path.join(patch_6_path, people, img_name)
                 img = cv2.imread(origin_img_path)
                 left_landmark = face_alignment.alignment(img)[3]
                 right_landmark = face_alignment.alignment(img)[4]
@@ -187,12 +190,15 @@ def generate_patch(patch_name):
 
 
 # 获取一个人的所有图片（文件路径）列表 乱序之后输出该列表
-def get_img_path_for_one_people(people_dir):
+def get_img_path_for_one_people(people_dir, *truncation):
     if people_dir[-1] != ('/' or '\\'):
         people_dir += '/'
     people_img_path = []
     for img in os.listdir(people_dir):
         img_path = people_dir + img
+        if truncation[0] == True:  # 截断 方便生成训练分类模型的数据
+            p = re.compile('\w*.\d+.jpg')  # 用正则表达式匹配 进行截断
+            img_path = p.search(img_path).group()  # 截断之后的数据 只剩下人名和图像编号
         people_img_path.append(img_path)
     random.shuffle(people_img_path)
     return people_img_path
@@ -206,7 +212,6 @@ def generate_csv_for_deepid(patch_name):
     for label, people in people_list_for_deepid:
         patch_path = get_patch_path(patch_name)
         people_img_path = get_img_path_for_one_people(os.path.join(patch_path, people))
-
         people_imgs_for_train = people_img_path[0:9 * len(people_img_path) // 10]  # 取其中9/10作为训练集
         people_imgs_for_valid = people_img_path[9 * len(people_img_path) // 10:]  # 其中1/10作为验证（防止过拟合）
         dataset_for_deepid_train += zip(people_imgs_for_train, [str(label)] * len(people_imgs_for_train))
@@ -221,6 +226,21 @@ def generate_csv_for_deepid(patch_name):
             print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
     with open(csv_for_deepid_valid, 'w') as f:
         for item in dataset_for_deepid_valid:
+            print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
+
+
+# 构建用于训练分类模型的csv
+def generate_csv_for_verification_model():
+    people_list_for_verification_model = update_dataset_imformation('images')[2]
+    dataset_for_verification_model = []
+    for label, people in people_list_for_verification_model:
+        path = get_patch_path('images')
+        people_img_path = get_img_path_for_one_people(os.path.join(path, people), True)
+        dataset_for_verification_model += zip(people_img_path, [str(label)] * len(people_img_path))
+    random.shuffle(dataset_for_verification_model)
+    csv_for_verification_model = 'data/verification_model.csv'
+    with open(csv_for_verification_model, 'w') as f:
+        for item in dataset_for_verification_model:
             print(str(item[0]).strip(), ' ', str(item[1]).strip(), file=f)
 
 
@@ -340,7 +360,6 @@ def wash_data():
         for img_name in os.listdir(os.path.join(dataset_path, people)):
             img_count += 1
             print('Washing...', people_count, '/', people_num, ':', img_count)
-
             img_path = os.path.join(dataset_path, people, img_name)
             img = cv2.imread(img_path)
             if not is_face(img):
@@ -349,7 +368,8 @@ def wash_data():
 
 
 if __name__ == '__main__':
-    patch_name = 'patch_1'
-    generate_patch(patch_name)
+    patch_name = 'patch_12'
+    generate_csv_for_verification_model()
+    # generate_patch(patch_name)
     # generate_csv_for_deepid(patch_name)
     # generate_pickle_for_deepid(patch_name)
