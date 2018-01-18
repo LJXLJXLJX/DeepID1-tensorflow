@@ -44,45 +44,7 @@ def update_dataset_imformation(patch_name):
 
 
 def generate_patch(patch_name):
-    def getRois(img, *landmarks):
-        if not len(landmarks) in [1, 2]:
-            raise Exception('para num error')
-        elif len(landmarks) == 1:
-            landmark = landmarks[0]
-            roi_size_half = min(landmark[0],
-                                landmark[1],
-                                img.shape[0] - landmark[1],
-                                img.shape[1] - landmark[0],
-                                img.shape[0] // 4
-                                )
-            img = img[
-                  landmark[1] - roi_size_half:landmark[1] + roi_size_half,
-                  landmark[0] - roi_size_half:landmark[0] + roi_size_half
-                  ]
-            return img
 
-        elif len(landmarks) == 2:
-            # 正方形区域的半边长
-            left_landmark = landmarks[0]
-            right_landmark = landmarks[1]
-            roi_size_half = min(left_landmark[0],
-                                left_landmark[1],
-                                img.shape[0] - left_landmark[1],
-                                img.shape[1] - left_landmark[0],
-                                right_landmark[0],
-                                right_landmark[1],
-                                img.shape[0] - right_landmark[1],
-                                img.shape[1] - right_landmark[0]
-                                )
-            left_img = img[
-                       left_landmark[1] - roi_size_half:left_landmark[1] + roi_size_half,
-                       left_landmark[0] - roi_size_half:left_landmark[0] + roi_size_half
-                       ]
-            right_img = img[
-                        right_landmark[1] - roi_size_half:right_landmark[1] + roi_size_half,
-                        right_landmark[0] - roi_size_half:right_landmark[0] + roi_size_half
-                        ]
-            return left_img, right_img
 
     if patch_name == 'images':
         raise Exception("you can't generate origin dataset")
@@ -123,7 +85,7 @@ def generate_patch(patch_name):
                 left_landmark = face_alignment.alignment(img)[0]
                 right_landmark = face_alignment.alignment(img)[1]
                 try:
-                    left_img, right_img = getRois(img, left_landmark, right_landmark)
+                    left_img, right_img = face_alignment.getRois(img, left_landmark, right_landmark)
                     left_img = cv2.resize(left_img, (31, 31))
                     right_img = cv2.resize(right_img, (31, 31))
                     cv2.imwrite(left_dst_img_path, left_img)
@@ -142,7 +104,7 @@ def generate_patch(patch_name):
                 img = cv2.imread(origin_img_path)
                 landmark = face_alignment.alignment(img)[2]
                 try:
-                    img = getRois(img, landmark)
+                    img = face_alignment.getRois(img, landmark)
                     img = cv2.resize(img, (31, 31))
                     cv2.imwrite(dst_img_path, img)
                 except:
@@ -164,7 +126,7 @@ def generate_patch(patch_name):
                 left_landmark = face_alignment.alignment(img)[3]
                 right_landmark = face_alignment.alignment(img)[4]
                 try:
-                    left_img, right_img = getRois(img, left_landmark, right_landmark)
+                    left_img, right_img = face_alignment.getRois(img, left_landmark, right_landmark)
                     left_img = cv2.resize(left_img, (31, 31))
                     right_img = cv2.resize(right_img, (31, 31))
                     cv2.imwrite(left_dst_img_path, left_img)

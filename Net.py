@@ -16,6 +16,8 @@ import pickle
 import shutil
 
 
+class_num=685
+
 # 高斯截断初始化w
 def weight_variable(shape):
     with tf.name_scope('weights'):
@@ -211,7 +213,7 @@ class CNN():
         labelArrValid = (np.arange(class_num) == labelArrValid[:, None]).astype(np.float32)
 
         logdir = 'log'
-        patch_logdir=os.path.join(logdir,patch_name)
+        patch_logdir = os.path.join(logdir, patch_name)
         if os.path.exists(patch_logdir):
             shutil.rmtree(patch_logdir)
             os.mkdir(patch_logdir)
@@ -238,12 +240,17 @@ class CNN():
                 if i % 5000 == 0 and i != 0:
                     self.saver.save(sess, 'checkpoint/' + patch_name + '.ckpt')
 
-
-
+    # 读取预训练数据 输入一副patch 输出deepid层
+    def output_deepid(self, img, ckpt):
+        with tf.Session() as sess:
+            self.saver.restore(sess, ckpt)
+            feature=sess.run(self.h5, {self.h0: img})
+            feature=np.asarray(feature[0])
+            return feature
 
 
 if __name__ == '__main__':
-    patch_name='patch_12'
-    class_num=dataSetPreProcessRe.update_dataset_imformation('images')[4]
+    patch_name = 'patch_12'
+    class_num = dataSetPreProcessRe.update_dataset_imformation('images')[4]
     cnn = CNN('gray')
     cnn.train_patch_from_pickle(patch_name)

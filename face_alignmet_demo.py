@@ -2,7 +2,8 @@ import cv2
 import dlib
 detector = dlib.get_frontal_face_detector()
 landmark_predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
-img = cv2.imread('1.jpg')
+img = cv2.imread('F:/Project/TheTrulyDeepID/DeepID1/DataSet/images/A.J._Buckley/1.jpg')
+img=cv2.resize(img,(500,500))
 faces = detector(img,1)
 if (len(faces) > 0):
     for k,d in enumerate(faces):
